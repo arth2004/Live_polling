@@ -93,6 +93,44 @@ export default function bindPollHandlers(io, socket) {
     }
   })
 
+  // Chat message
+  socket.on('chat:message', (data) => {
+    try {
+      const { sender, message, sessionId } = data
+      if (!sender || !message || !sessionId) {
+        socket.emit('error', { message: 'Missing required fields for chat message' })
+        return
+      }
+
+      // Verify the socket is in the session
+      const sess = store.get(sessionId)
+      if (!sess) {
+        socket.emit('error', { message: 'Session not found' })
+        return
+      }
+
+      // Check if the sender is the teacher or a student in the session
+      const isTeacher = sess.teacherId === socket.id
+      const isStudent = sess.students[socket.id] === sender
+
+      if (!isTeacher && !isStudent) {
+        socket.emit('error', { message: 'Not authorized to send messages in this session' })
+        return
+      }
+
+      // Broadcast the message to all participants in the session
+      const chatMessage = {
+        sender,
+        message,
+        timestamp: new Date().toISOString()
+      }
+
+      io.to(sessionId).emit('chat:message', chatMessage)
+    } catch (err) {
+      socket.emit('error', { message: err.message })
+    }
+  })
+
   // Teacher removes a student
   socket.on('teacher:remove-student', (data) => {
     try {

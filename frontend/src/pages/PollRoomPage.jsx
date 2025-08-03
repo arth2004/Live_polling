@@ -25,7 +25,7 @@ export default function PollRoomPage({ userName = "Teacher" }) {
   const [showForm, setShowForm] = useState(false);
   const [draftQ, setDraftQ] = useState("");
   const [draftOpts, setDraftOpts] = useState(["", ""]);
-  const [draftDur, setDraftDur] = useState(30);
+  const [draftDur, setDraftDur] = useState(60);
 
   const timerRef = useRef(null);
 
@@ -112,7 +112,7 @@ export default function PollRoomPage({ userName = "Teacher" }) {
         setShowForm(false);
         setDraftQ("");
         setDraftOpts(["", ""]);
-        setDraftDur(30);
+        setDraftDur(60);
       }
     );
   };
@@ -123,123 +123,150 @@ export default function PollRoomPage({ userName = "Teacher" }) {
   const addOpt = () => setDraftOpts((os) => [...os, ""]);
   const removeOpt = (i) => setDraftOpts((os) => os.filter((_, j) => j !== i));
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl">
-        {/* Poll Card */}
-        <h2 className="text-lg font-bold mb-2 text-black">Question</h2>
-        <div className="bg-poll-card rounded-lg shadow-sm overflow-hidden">
-          {/* Header bar */}
-          <div className="bg-poll-header text-white py-3 flex justify-between items-center">
-            <p className="font-bold p-4 text-white bg-gradient-to-r from-textDark to-textGray w-full">
-              {question}
-            </p>
-            {/* <p className="font-mono text-black">{remaining != null ? `0:${remaining.toString().padStart(2,'0')}` : "--:--"}</p> */}
-          </div>
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
-          {/* Bars */}
-          <div className="py-6 space-y-4">
-            {options.map((opt, i) => {
-              const pct = totalAnswers
-                ? Math.round((opt.count / totalAnswers) * 100)
-                : 0;
-              return (
-                <div key={i} className="flex items-center gap-4 bg-[f6f6f6]">
-                  <div className="w-8 h-8 bg-brandPurple text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
-                    {i + 1}
-                  </div>
-                  <div className="w-16 text-poll-text font-medium truncate">
-                    {opt.text}
-                  </div>
-                  <div className="flex-1 bg-poll-bar-bg rounded-full h-8 overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300 ease-out"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className="w-12 text-right text-poll-text font-medium">
-                    {pct}%
-                  </div>
-                </div>
-              );
-            })}
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-3xl">
+        {/* Poll Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Question 1</h1>
+            <div className="flex items-center space-x-4">
+              <span className="text-red-500 font-mono text-lg">
+                ⏰ {remaining !== null ? formatTime(remaining) : '00:15'}
+              </span>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="bg-[#7565D9] text-white px-4 py-2 rounded-lg hover:bg-[#6554C8] transition-colors"
+              >
+                👁 View Poll History
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex justify-end mt-6 ">
-          <Button
-            variant="secondary"
+
+        {/* Question Display */}
+        <div className="bg-white rounded-xl border-2 border-[#3B82F6] overflow-hidden shadow-lg mb-6">
+          {/* Question Header */}
+          <div className="bg-gray-700 text-white px-6 py-4">
+            <h3 className="font-semibold">{question || "Which planet is known as the Red Planet?"}</h3>
+          </div>
+
+          {/* Results */}
+          <div className="p-6">
+            <div className="space-y-4">
+              {options.map((opt, i) => {
+                const pct = totalAnswers ? Math.round((opt.count / totalAnswers) * 100) : 0;
+                return (
+                  <div key={i} className="flex items-center space-x-4">
+                    <div className="w-8 h-8 flex items-center justify-center bg-[#7565D9] text-white rounded-full font-semibold">
+                      {i + 1}
+                    </div>
+                    <div className="w-16 font-medium text-gray-700">{opt.text}</div>
+                    <div className="flex-1 bg-gray-200 h-8 rounded-lg overflow-hidden">
+                      <div 
+                        className="h-full bg-[#7565D9] transition-all duration-500 flex items-center justify-end pr-2"
+                        style={{ width: `${pct}%` }}
+                      >
+                        {pct > 0 && <span className="text-white text-sm font-semibold">{pct}%</span>}
+                      </div>
+                    </div>
+                    {pct === 0 && <span className="w-12 text-right text-gray-600 font-semibold">{pct}%</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* New Question Button */}
+        <div className="text-center">
+          <button
             onClick={() => setShowForm(true)}
-            className=" text-white rounded-full  hover:bg-primary/90 bg-gradient-to-r from-brandPurple to-brandBlue"
+            className="bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white font-semibold px-6 py-3 rounded-full hover:from-[#6554C8] hover:to-[#3C0ABC] transition-all duration-200 shadow-lg"
           >
-           +
-            Ask a new question
-          </Button>
+            + Ask a new question
+          </button>
         </div>
       </div>
 
       {/* Chat Toggle */}
       <button
-        onClick={() => setSidebarOpen((v) => !v)}
-        className="fixed bottom-10 right-20 bg-primary text-primary-foreground p-4 rounded-full shadow-lg hover:bg-primary/90 transition z-20"
+        onClick={() => setSidebarOpen(true)}
+        className="fixed bottom-6 right-6 bg-[#7565D9] text-white p-4 rounded-full shadow-lg hover:bg-[#6554C8] transition-colors z-20"
       >
-        <FiMessageCircle size={24} />
+        💬
       </button>
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="fixed bottom-24 h-1/2 right-20 w-80 bg-poll-card shadow-xl z-30 flex flex-col">
-          <div className="flex border-b border-border">
-            {["chat", "participants"].map((t) => (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-30" onClick={() => setSidebarOpen(false)}>
+          <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex border-b">
+              {["Chat", "Participants"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t.toLowerCase())}
+                  className={`flex-1 py-4 text-center font-medium ${
+                    tab === t.toLowerCase()
+                      ? "border-b-2 border-[#7565D9] text-[#7565D9]"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
               <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 py-3 text-center transition-colors ${
-                  tab === t
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-poll-text hover:text-primary"
-                }`}
+                onClick={() => setSidebarOpen(false)}
+                className="px-4 py-4 text-gray-500 hover:text-gray-700"
               >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                ✕
               </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {tab === "chat" ? (
-              <ChatBox
-                chatLog={chatLog}
-                onSend={(text) =>
-                  socket.emit("chat:message", {
-                    sender: userName,
-                    message: text,
-                    sessionId,
-                  })
-                }
-              />
-            ) : (
-              <ul className="p-4 space-y-2">
-                {participants.map((name, idx) => (
-                  <li
-                    key={idx}
-                    className="flex justify-between items-center p-2 bg-muted rounded"
-                  >
-                    <span className="text-poll-text truncate">{name}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        socket.emit("teacher:remove-student", {
-                          sessionId,
-                          name,
-                        })
-                      }
-                      className="text-destructive hover:text-destructive"
-                    >
-                      Kick
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {tab === "chat" ? (
+                <ChatBox
+                  chatLog={chatLog}
+                  onSend={(text) =>
+                    socket.emit("chat:message", {
+                      sender: userName,
+                      message: text,
+                      sessionId,
+                    })
+                  }
+                />
+              ) : (
+                <div className="p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Participants</h3>
+                  <div className="space-y-3">
+                    {participants.map((participant, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{participant.name || participant}</span>
+                          <span className="text-sm text-gray-500">Online</span>
+                        </div>
+                        <button
+                          onClick={() =>
+                            socket.emit("teacher:remove-student", {
+                              sessionId,
+                              name: participant.name || participant,
+                            })
+                          }
+                          className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                        >
+                          Kick out
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -247,67 +274,90 @@ export default function PollRoomPage({ userName = "Teacher" }) {
       {/* Ask-New-Question Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-          <div className="bg-white rounded-lg shadow-lg w-96 p-6 space-y-4 relative">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 space-y-6 relative mx-4">
             <button
               onClick={() => setShowForm(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
             >
-              <FiX />
+              ✕
             </button>
 
-            <h3 className="text-lg font-semibold">New Poll</h3>
-            <input
-              type="text"
-              placeholder="Your question"
-              value={draftQ}
-              onChange={(e) => setDraftQ(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-            />
-
-            <div className="space-y-2">
-              {draftOpts.map((opt, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder={`Option ${i + 1}`}
-                    value={opt}
-                    onChange={(e) => updateOpt(i, e.target.value)}
-                    className="flex-1 border px-3 py-2 rounded"
-                  />
-                  {draftOpts.length > 2 && (
-                    <button
-                      onClick={() => removeOpt(i)}
-                      className="text-red-500"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={addOpt}
-                className="text-sm text-primary hover:underline"
-              >
-                + Add another option
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="font-medium">Duration (sec):</label>
-              <input
-                type="number"
-                min={5}
-                max={300}
-                value={draftDur}
-                onChange={(e) => setDraftDur(Number(e.target.value))}
-                className="w-20 border px-2 py-1 rounded"
+            <h3 className="text-2xl font-bold text-gray-900">Create New Poll</h3>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Question</label>
+              <textarea
+                placeholder="Enter your question here..."
+                value={draftQ}
+                onChange={(e) => setDraftQ(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#7565D9] resize-none"
+                rows={3}
               />
             </div>
 
-            <div className="text-right">
-              <Button onClick={handlePublish} className="px-6">
-                Publish
-              </Button>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Options</label>
+              <div className="space-y-3">
+                {draftOpts.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="w-8 h-8 flex items-center justify-center bg-[#7565D9] text-white rounded-full text-sm font-semibold">
+                      {i + 1}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={`Option ${i + 1}`}
+                      value={opt}
+                      onChange={(e) => updateOpt(i, e.target.value)}
+                      className="flex-1 border-2 border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:border-[#7565D9]"
+                    />
+                    {draftOpts.length > 2 && (
+                      <button
+                        onClick={() => removeOpt(i)}
+                        className="text-red-500 hover:text-red-700 text-xl font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={addOpt}
+                  className="text-[#7565D9] font-medium hover:text-[#6554C8] transition-colors"
+                >
+                  + Add another option
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Duration</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={5}
+                  max={300}
+                  value={draftDur}
+                  onChange={(e) => setDraftDur(Number(e.target.value))}
+                  className="w-24 border-2 border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#7565D9]"
+                />
+                <span className="text-gray-600">seconds</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={!draftQ.trim() || draftOpts.filter(o => o.trim()).length < 2}
+                className="bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white font-semibold px-6 py-2 rounded-lg hover:from-[#6554C8] hover:to-[#3C0ABC] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                Create Poll
+              </button>
             </div>
           </div>
         </div>

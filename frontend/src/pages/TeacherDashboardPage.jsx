@@ -14,8 +14,8 @@ export default function TeacherDashboardPage() {
   const [question, setQuestion] = useState('')
   const [duration, setDuration] = useState(60)
   const [options, setOptions] = useState([
-    { id: 1, text: '', correct: null },
-    { id: 2, text: '', correct: null },
+    { id: 1, text: 'Rahul Bajaj', correct: true },
+    { id: 2, text: 'Rahul Bajaj', correct: false },
   ])
 
   // 1️⃣ On mount, create session if none in URL
@@ -38,9 +38,9 @@ export default function TeacherDashboardPage() {
       opts.map(o => (o.id === id ? { ...o, correct: val } : o))
     )
   const addOption = () =>
-    setOptions(opts => [...opts, { id: Date.now(), text: '', correct: null }])
+    setOptions(opts => [...opts, { id: Date.now(), text: '', correct: false }])
 
-  // 2️⃣ On “Ask Question”
+  // 2️⃣ On "Ask Question"
   const handleSubmit = () => {
   if (!question.trim() || options.some(o => !o.text.trim())) return
 
@@ -59,123 +59,112 @@ export default function TeacherDashboardPage() {
 }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6 space-y-8">
-      {/*  Invite code */}
-      <div>
-        <h2 className="text-xl font-medium text-textDark">Session ID</h2>
-        <div className="mt-1 inline-block bg-bgLight px-4 py-2 rounded-lg font-mono">
-          {sessionId}
-        </div>
-      </div>
-
-      {/*  Poll Creation Form (your existing JSX) */}
-      <div>
+    <div className="min-h-screen bg-gray-50 py-12 px-6">
+      <div className="max-w-2xl mx-auto">
         {/* Badge */}
-        <div className="mb-6 inline-flex items-center bg-gradient-to-r from-brandPurple to-brandDeep text-xs font-medium uppercase px-3 py-1 rounded-full text-white">
-          Intervue Poll
+        <div className="mb-8 inline-flex items-center bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-xs font-medium uppercase px-4 py-2 rounded-full text-white shadow-lg">
+          <span className="mr-2">✨</span> Intervue Poll
         </div>
 
         {/* Heading */}
-        <h1 className="text-3xl text-textDark mb-1">
-          Let’s <span className="font-bold">Get Started</span>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          Let's <span className="text-gray-900">Get Started</span>
         </h1>
-        <p className="text-textGray mb-8">
-          Create and manage your poll, then monitor live responses.
+        <p className="text-gray-600 mb-8">
+          you'll have the ability to create and manage polls, ask questions, and monitor your students' responses in real-time.
         </p>
 
-        {/* Question + Duration */}
-        <div className="flex flex-col md:flex-row md:items-start md:space-x-6 mb-8">
-          <div className="flex-1">
-            <label className="block mb-2 font-medium text-textDark">
-              Enter your question
-            </label>
+        {/* Question Input */}
+        <div className="mb-8">
+          <div className="relative">
             <textarea
               maxLength={100}
               rows={4}
               value={question}
               onChange={e => setQuestion(e.target.value)}
-              className="w-full bg-bgLight p-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-brandPurple"
-              placeholder="Type your question here..."
+              className="w-full bg-white border-2 border-[#3B82F6] rounded-lg p-4 pr-20 focus:outline-none focus:border-[#2563EB] resize-none"
+              placeholder="Enter your question"
             />
-            <div className="text-right text-sm text-textGray mt-1">
+            <div className="absolute top-4 right-4 flex items-center space-x-2">
+              <span className="text-sm text-gray-500">{duration} seconds</span>
+              <select
+                value={duration}
+                onChange={e => setDuration(Number(e.target.value))}
+                className="bg-white border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-[#3B82F6]"
+              >
+                {TIME_OPTIONS.map(sec => (
+                  <option key={sec} value={sec}>
+                    {sec}s
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="absolute bottom-4 right-4 text-sm text-gray-400">
               {question.length}/100
             </div>
           </div>
-          <div className="mt-4 md:mt-0">
-            <label className="block mb-2 font-medium text-textDark">
-              Time Limit
-            </label>
-            <select
-              value={duration}
-              onChange={e => setDuration(Number(e.target.value))}
-              className="bg-white border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brandPurple"
-            >
-              {TIME_OPTIONS.map(sec => (
-                <option key={sec} value={sec}>
-                  {sec} seconds
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        {/* Options */}
-        <div className="space-y-6 mb-8">
-          {options.map((opt, idx) => (
-            <div
-              key={opt.id}
-              className="flex flex-col md:flex-row md:items-center md:space-x-4"
-            >
-              <div className="flex items-center space-x-3 mb-2 md:mb-0">
-                <div className="w-6 h-6 flex items-center justify-center bg-brandPurple text-white rounded-full">
+        {/* Edit Options Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Options</h3>
+          <div className="space-y-4">
+            {options.map((opt, idx) => (
+              <div key={opt.id} className="flex items-center space-x-4">
+                <div className="w-8 h-8 flex items-center justify-center bg-[#7565D9] text-white rounded-full font-semibold">
                   {idx + 1}
                 </div>
                 <input
                   type="text"
                   value={opt.text}
                   onChange={e => handleOptionText(opt.id, e.target.value)}
-                  placeholder={`Option ${idx + 1}`}
-                  className="flex-1 bg-bgLight p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brandPurple"
+                  placeholder={`Rahul Bajaj`}
+                  className="flex-1 bg-gray-100 border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:border-[#7565D9] focus:bg-white"
                 />
+                <div className="flex items-center space-x-6">
+                  <span className="text-gray-700 font-medium">Is it Correct?</span>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name={`correct-${opt.id}`}
+                      checked={opt.correct === true}
+                      onChange={() => handleOptionCorrect(opt.id, true)}
+                      className="w-4 h-4 text-[#7565D9] border-gray-300 focus:ring-[#7565D9]"
+                    />
+                    <span className="ml-2 text-gray-700">Yes</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name={`correct-${opt.id}`}
+                      checked={opt.correct === false}
+                      onChange={() => handleOptionCorrect(opt.id, false)}
+                      className="w-4 h-4 text-[#7565D9] border-gray-300 focus:ring-[#7565D9]"
+                    />
+                    <span className="ml-2 text-gray-700">No</span>
+                  </label>
+                </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <span className="text-textDark">Is it Correct?</span>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name={`correct-${opt.id}`}
-                    checked={opt.correct === true}
-                    onChange={() => handleOptionCorrect(opt.id, true)}
-                    className="form-radio h-4 w-4 text-brandPurple"
-                  />
-                  <span className="ml-1 text-textGray">Yes</span>
-                </label>
-                <label className="inline-flex items-center">
-                  <input
-                    type="radio"
-                    name={`correct-${opt.id}`}
-                    checked={opt.correct === false}
-                    onChange={() => handleOptionCorrect(opt.id, false)}
-                    className="form-radio h-4 w-4 text-brandPurple"
-                  />
-                  <span className="ml-1 text-textGray">No</span>
-                </label>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Add more + Submit */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        {/* Add more option button */}
+        <div className="mb-8">
           <button
             onClick={addOption}
-            className="mb-4 sm:mb-0 inline-block text-brandPurple font-medium px-4 py-2 border border-brandPurple rounded-lg hover:bg-brandPurple hover:text-white transition"
+            className="text-[#7565D9] font-medium px-4 py-2 border-2 border-[#7565D9] rounded-lg hover:bg-[#7565D9] hover:text-white transition-all duration-200"
           >
             + Add More option
           </button>
+        </div>
+
+        {/* Ask Question Button */}
+        <div className="flex justify-end">
           <button
             onClick={handleSubmit}
-            className="inline-block bg-gradient-to-r from-brandPurple to-brandDeep text-white font-medium px-8 py-3 rounded-full hover:opacity-90 transition"
+            disabled={!question.trim() || options.some(o => !o.text.trim())}
+            className="bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white font-semibold px-8 py-3 rounded-full hover:from-[#6554C8] hover:to-[#3C0ABC] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
           >
             Ask Question
           </button>
