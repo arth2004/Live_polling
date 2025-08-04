@@ -1,124 +1,163 @@
 // sockets/pollHandlers.js
-import store from '../models/sessionStore.js'
+import store from "../models/sessionStore.js";
 import {
   teacherInit,
   studentJoin,
   createPoll,
   submitAnswer,
   removeStudent,
-  cleanupOnDisconnect
-} from '../services/sessionsServices.js'
+  cleanupOnDisconnect,
+} from "../services/sessionsServices.js";
 
 function tally(rawAnswers) {
   return Object.values(rawAnswers).reduce((acc, choice) => {
-    acc[choice] = (acc[choice] || 0) + 1
-    return acc
-  }, {})
+    acc[choice] = (acc[choice] || 0) + 1;
+    return acc;
+  }, {});
 }
 
 export default function bindPollHandlers(io, socket) {
   // Teacher creates a new session
-  socket.on('teacher:create-session', (ack) => {
+  socket.on("teacher:create-session", (ack) => {
     try {
-      const sessionId = teacherInit(socket)
-      ack({ sessionId })
+      const sessionId = teacherInit(socket);
+      ack({ sessionId });
     } catch (err) {
-      ack({ error: err.message })
+      ack({ error: err.message });
     }
-  })
+  });
 
   // Student joins
-  socket.on('student:join-session', (data, cb) => {
+  socket.on("student:join-session", (data, cb) => {
     try {
-      const { users, latestPoll } = studentJoin(data, socket)
+      const { users, latestPoll } = studentJoin(data, socket);
 
       // broadcast updated user list
-      io.to(data.sessionId).emit('session:update-users', users)
+      io.to(data.sessionId).emit("session:update-users", users);
 
       // If there's an active poll, send its question/options/counts back to just this client
       if (latestPoll) {
-        const { question, options, duration, answers: raw } = latestPoll
+        const { question, options, duration, answers: raw } = latestPoll;
         cb({
           success: true,
           poll: {
             question,
             options,
             duration,
-            answers: tally(raw)
-          }
-        })
+            answers: tally(raw),
+          },
+        });
       } else {
-        cb({ success: true })
+        cb({ success: true });
       }
     } catch (err) {
-      cb({ success: false, message: err.message })
+      cb({ success: false, message: err.message });
     }
-  })
+  });
 
   // Teacher creates a poll
-  socket.on('teacher:create-poll', (data, ack) => {
+  socket.on("teacher:create-poll", (data, ack) => {
     try {
-      const poll = createPoll(data)
+      const poll = createPoll(data);
       // broadcast new poll with duration (client will start countdown)
-      io.to(data.sessionId).emit('poll:new', poll)
-      
+      io.to(data.sessionId).emit("poll:new", poll);
+
       // auto‐end after duration
       setTimeout(() => {
-        const sess = store.get(data.sessionId)
-        if (sess) sess.activePollIndex = null
-        io.to(data.sessionId).emit('poll:end')
-      }, data.duration * 1000)
+        const sess = store.get(data.sessionId);
+        if (sess) sess.activePollIndex = null;
+        io.to(data.sessionId).emit("poll:end");
+      }, data.duration * 1000);
 
-      ack?.({ success: true, poll })
+      ack?.({ success: true, poll });
     } catch (err) {
-      ack?.({ success: false, message: err.message })
+      ack?.({ success: false, message: err.message });
     }
-  })
+  });
 
   // Student submits answer
-  socket.on('student:submit-answer', (data) => {
+  socket.on("student:submit-answer", (data) => {
     try {
       // rawAnswers: { studentName: choice, … }
       const rawAnswers = submitAnswer({
         sessionId: data.sessionId,
         socketId: socket.id,
-        answer: data.answer
-      })
+        answer: data.answer,
+      });
 
       // convert to counts: { choice: count, … }
-      const counts = tally(rawAnswers)
-      io.to(data.sessionId).emit('poll:update-results', counts)
+      const counts = tally(rawAnswers);
+      io.to(data.sessionId).emit("poll:update-results", counts);
     } catch (err) {
-      socket.emit('error', { message: err.message })
+      socket.emit("error", { message: err.message });
     }
-  })
+  });
+
+  //chat message from student
+  socket.on("chat:message", (data) => {
+    try {
+      const { sender, message, sessionId } = data;
+      if (!sender || !message || !sessionId) {
+        socket.emit("error", { message: "Invalid chat data" });
+        return;
+      }
+      //Verify the socket is in the session
+      const sess = store.get(sessionId);
+      if (!sess || !sess.students[socket.id]) {
+        socket.emit("error", { message: "You are not in this session" });
+        return;
+      }
+
+      //check if the sender is a teacher or student
+      const isTeacher = sess.teacherId === socket.id;
+      const isStudent = sess.students[socket.id] === sender;
+      if (!isTeacher && !isStudent) {
+        socket.emit("error", {
+          message: "You are not allowed to send messages",
+        });
+        return;
+      }
+
+      //Broadcast the message to all users in the session
+      const chatMessage = {
+        sender,
+        message,
+        timestamp: new Date().toISOString(),
+      };
+      io.to(sessionId).emit("chat:message", chatMessage);
+    } catch (err) {
+      socket.emit("error", { message: err.message });
+    }
+  });
 
   // Teacher removes a student
-  socket.on('teacher:remove-student', (data) => {
+  socket.on("teacher:remove-student", (data) => {
     try {
-      const targetSocketId = removeStudent(data)
+      // Service now returns both socketId and the updated user array
+      const { targetSocketId, users } = removeStudent(data);
+
+      // Tell that one student they’ve been kicked
       if (targetSocketId) {
-        io.to(targetSocketId).emit('session:kicked')
+        io.to(targetSocketId).emit("session:kicked");
       }
-      const sess = store.get(data.sessionId)
-      io.to(data.sessionId)
-        .emit('session:update-users', Object.values(sess.students))
+
+      // Broadcast the new participants list to the rest
+      io.to(data.sessionId).emit("session:update-users", users);
     } catch (err) {
-      socket.emit('error', { message: err.message })
+      socket.emit("error", { message: err.message });
     }
-  })
+  });
 
   // Cleanup on disconnect
-  socket.on('disconnect', () => {
-    const result = cleanupOnDisconnect(socket)
-    if (!result) return
+  socket.on("disconnect", () => {
+    const result = cleanupOnDisconnect(socket);
+    if (!result) return;
 
-    if (result.type === 'sessionEnd') {
-      io.to(result.sessionId).emit('session:end')
+    if (result.type === "sessionEnd") {
+      io.to(result.sessionId).emit("session:end");
     }
-    if (result.type === 'studentLeave') {
-      io.to(result.sessionId)
-        .emit('session:update-users', result.users)
+    if (result.type === "studentLeave") {
+      io.to(result.sessionId).emit("session:update-users", result.users);
     }
-  })
+  });
 }
