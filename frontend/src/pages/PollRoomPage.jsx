@@ -14,6 +14,7 @@ export default function PollRoomPage({ userName = "Teacher" }) {
   const [options, setOptions] = useState([]); // [{ text, count }]
   const [totalAnswers, setTotalAnswers] = useState(0);
   const [remaining, setRemaining] = useState(null); // seconds left
+  const [pollHistory, setPollHistory] = useState([]); // Store completed polls
 
   // Sidebar/chat
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -80,6 +81,23 @@ export default function PollRoomPage({ userName = "Teacher" }) {
       );
     });
 
+    socket.on("poll:end", () => {
+      // When poll ends, add it to history
+      if (question && options.length > 0) {
+        const pollResult = {
+          question,
+          options: options.map(opt => ({
+            text: opt.text,
+            count: opt.count,
+            percentage: totalAnswers ? Math.round((opt.count / totalAnswers) * 100) : 0
+          })),
+          totalAnswers,
+          endedAt: new Date().toLocaleString()
+        };
+        setPollHistory(prev => [...prev, pollResult]);
+      }
+    });
+
     socket.on("chat:message", (msg) => setChatLog((log) => [...log, msg]));
 
     socket.on("session:update-users", (users) => setParticipants(users));
@@ -88,10 +106,11 @@ export default function PollRoomPage({ userName = "Teacher" }) {
       clearInterval(timerRef.current);
       socket.off("poll:new");
       socket.off("poll:update-results");
+      socket.off("poll:end");
       socket.off("chat:message");
       socket.off("session:update-users");
     };
-  }, [socket, sessionId, userName]);
+  }, [socket, sessionId, userName, question, options, totalAnswers]);
 
   // send new poll
   const handlePublish = () => {
@@ -135,13 +154,16 @@ export default function PollRoomPage({ userName = "Teacher" }) {
         {/* Poll Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Question 1</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Question {pollHistory.length + 1}</h1>
             <div className="flex items-center space-x-4">
               <span className="text-red-500 font-mono text-lg">
                 ⏰ {remaining !== null ? formatTime(remaining) : '00:15'}
               </span>
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => {
+                  setSidebarOpen(true);
+                  setTab('history');
+                }}
                 className="bg-[#7565D9] text-white px-4 py-2 rounded-lg hover:bg-[#6554C8] transition-colors"
               >
                 👁 View Poll History
@@ -208,11 +230,11 @@ export default function PollRoomPage({ userName = "Teacher" }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-30" onClick={() => setSidebarOpen(false)}>
           <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex border-b">
-              {["Chat", "Participants"].map((t) => (
+              {["Chat", "Participants", "History"].map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t.toLowerCase())}
-                  className={`flex-1 py-4 text-center font-medium ${
+                  className={`flex-1 py-4 text-center font-medium text-sm ${
                     tab === t.toLowerCase()
                       ? "border-b-2 border-[#7565D9] text-[#7565D9]"
                       : "text-gray-500 hover:text-gray-700"
@@ -240,7 +262,7 @@ export default function PollRoomPage({ userName = "Teacher" }) {
                     })
                   }
                 />
-              ) : (
+              ) : tab === "participants" ? (
                 <div className="p-6">
                   <h3 className="font-semibold text-gray-900 mb-4">Participants</h3>
                   <div className="space-y-3">
@@ -264,6 +286,45 @@ export default function PollRoomPage({ userName = "Teacher" }) {
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                // Poll History Tab
+                <div className="p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Poll History</h3>
+                  {pollHistory.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      No polls completed yet
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pollHistory.map((poll, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Poll {idx + 1}: {poll.question}
+                          </h4>
+                          <div className="text-sm text-gray-600 mb-3">
+                            Completed: {poll.endedAt} | Total Responses: {poll.totalAnswers}
+                          </div>
+                          <div className="space-y-2">
+                            {poll.options.map((opt, i) => (
+                              <div key={i} className="flex items-center justify-between">
+                                <span className="text-sm">{opt.text}</span>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-16 bg-gray-200 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-[#7565D9]"
+                                      style={{ width: `${opt.percentage}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium w-8">{opt.percentage}%</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

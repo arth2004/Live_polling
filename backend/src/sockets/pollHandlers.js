@@ -65,8 +65,23 @@ export default function bindPollHandlers(io, socket) {
       // auto‐end after duration
       setTimeout(() => {
         const sess = store.get(data.sessionId)
-        if (sess) sess.activePollIndex = null
-        io.to(data.sessionId).emit('poll:end')
+        if (sess && sess.activePollIndex !== null) {
+          const completedPoll = sess.polls[sess.activePollIndex]
+          
+          // Save to history
+          const pollResults = {
+            ...completedPoll,
+            results: tally(completedPoll.answers),
+            completedAt: new Date().toISOString()
+          }
+          store.addToHistory(data.sessionId, completedPoll, tally(completedPoll.answers))
+          
+          // Clear active poll
+          sess.activePollIndex = null
+          
+          // Notify all clients that poll ended
+          io.to(data.sessionId).emit('poll:end', pollResults)
+        }
       }, data.duration * 1000)
 
       ack?.({ success: true, poll })
@@ -143,6 +158,26 @@ export default function bindPollHandlers(io, socket) {
         .emit('session:update-users', Object.values(sess.students))
     } catch (err) {
       socket.emit('error', { message: err.message })
+    }
+  })
+
+  // Get poll history
+  socket.on('teacher:get-poll-history', (data, ack) => {
+    try {
+      const sess = store.get(data.sessionId)
+      if (!sess) {
+        ack({ success: false, message: 'Session not found' })
+        return
+      }
+
+      if (sess.teacherId !== socket.id) {
+        ack({ success: false, message: 'Only teachers can access poll history' })
+        return
+      }
+
+      ack({ success: true, history: sess.pollHistory })
+    } catch (err) {
+      ack({ success: false, message: err.message })
     }
   })
 

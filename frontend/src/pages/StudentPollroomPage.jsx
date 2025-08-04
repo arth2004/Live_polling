@@ -99,6 +99,7 @@ export default function StudentPollRoomPage() {
       clearInterval(timerRef.current)
     })
 
+    // Listen for being kicked out
     socket.on('session:kicked', () => {
       setIsKicked(true)
       clearInterval(timerRef.current)
@@ -212,7 +213,7 @@ export default function StudentPollRoomPage() {
               <div className="space-y-4 mb-6">
                 {options.map((opt, i) => (
                   <button
-                    key={i}
+                    key={`${opt}-${i}`}
                     onClick={() => setSelectedChoice(opt)}
                     className={`w-full flex items-center space-x-4 border-2 rounded-lg p-4 transition-all hover:shadow-md ${
                       selectedChoice === opt
@@ -238,7 +239,7 @@ export default function StudentPollRoomPage() {
                   const count = answers[opt] || 0
                   const pct = total ? Math.round((count / total) * 100) : 0
                   return (
-                    <div key={i} className="flex items-center space-x-4">
+                    <div key={`result-${opt}-${i}`} className="flex items-center space-x-4">
                       <div className="w-8 h-8 flex items-center justify-center bg-[#7565D9] text-white rounded-full font-semibold">
                         {i + 1}
                       </div>
@@ -277,12 +278,6 @@ export default function StudentPollRoomPage() {
         {hasAnswered && (
           <div className="text-center">
             <p className="text-gray-600 mb-4">Wait for the teacher to ask a new question</p>
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white font-semibold px-6 py-3 rounded-full hover:from-[#6554C8] hover:to-[#3C0ABC] transition-all duration-200 shadow-lg"
-            >
-              + Ask a new question
-            </button>
           </div>
         )}
       </div>
