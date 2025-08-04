@@ -5,7 +5,13 @@ import initSockets from './sockets/index.js'
 import { PORT } from './config/index.js';
 
 const app = express();
-app.use(cors());
+app.use(cors(
+  {
+  origin: ['https://live-polling-eta.vercel.app/'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}
+));
 app.use(express.json());
 
 // import pollsRouter from './routes/polls.js';
